@@ -96,10 +96,19 @@ async function send() {
   } catch { addMessage("progress", "ネットワークエラー。", "エラー"); }
 }
 
-composer.addEventListener("submit", (e) => { e.preventDefault(); send(); });
+// IME変換中フラグ。Macで日本語確定のEnterが送信に化けるのを防ぐ要。
+let composing = false;
+input.addEventListener("compositionstart", () => { composing = true; });
+input.addEventListener("compositionend", () => { composing = false; });
+
+// 送信は「送信ボタンのクリック」と「Ctrl/Cmd+Enter」のみ。
+// ボタンは type="button" なのでEnterによるフォーム暗黙送信は起きない（誤送信防止）。
+const sendBtn = document.getElementById("send");
+sendBtn.addEventListener("click", () => send());
+composer.addEventListener("submit", (e) => e.preventDefault());
 input.addEventListener("keydown", (e) => {
-  // IME変換確定のEnter（isComposing / keyCode 229）では送信しない
-  if (e.isComposing || e.keyCode === 229) return;
+  // IME変換確定のEnter（変換中 / isComposing / keyCode 229）では送信しない
+  if (composing || e.isComposing || e.keyCode === 229) return;
   // Ctrl+Enter（Macは Cmd+Enter）で送信。単独Enterはtextareaの改行に任せる
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
 });
