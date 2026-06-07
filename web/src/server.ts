@@ -684,7 +684,14 @@ async function main() {
     const filesDir = await ensurePaperFilesDir();
     const resolved = path.resolve(filesDir, paper.file);
     if (!resolved.startsWith(path.resolve(filesDir) + path.sep)) return res.status(400).end();
-    res.sendFile(resolved, paper.filemime ? { headers: { "Content-Type": paper.filemime } } : {});
+    // 全体共通の厳格CSP(default-src 'none'; object-src 'none')はブラウザ内蔵PDFビューアを
+    // ブロックし、特にモバイルChrome/Edgeで「このコンテンツはブロックされました」になる。
+    // このファイル配信応答だけCSPを緩め、PDF等をインライン表示できるようにする。
+    // クリックジャッキング対策は frame-ancestors 'self'（自サイトのみ埋め込み可）で維持。
+    res.setHeader("Content-Security-Policy", "default-src 'self'; object-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; frame-ancestors 'self'");
+    const headers: Record<string, string> = { "Content-Disposition": "inline" };
+    if (paper.filemime) headers["Content-Type"] = paper.filemime;
+    res.sendFile(resolved, { headers });
   });
 
   app.delete("/api/papers/:id", requireFull, async (r, res) => {
