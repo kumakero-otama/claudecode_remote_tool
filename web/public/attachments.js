@@ -24,7 +24,7 @@ function createAttachments({ listEl, fileInput, attachBtn, textarea }) {
     }
     const label = document.createElement("span");
     label.className = "cname";
-    label.textContent = file ? file.name : "アップロード中…";
+    label.textContent = file ? (file.name || "画像") : "アップロード中…";
     chip.appendChild(label);
     listEl.appendChild(chip);
     render();
@@ -35,8 +35,12 @@ function createAttachments({ listEl, fileInput, attachBtn, textarea }) {
     const { chip, label } = makeChip(file);
     chip.classList.add("uploading");
     try {
+      // クリップボード画像はファイル名が空のことがあるので補完する
+      const ext0 = (file.type && file.type.split("/")[1]) || "png";
+      const ext = ext0 === "jpeg" ? "jpg" : ext0;
+      const fname = file.name || `pasted-image.${ext}`;
       const fd = new FormData();
-      fd.append("file", file, file.name);
+      fd.append("file", file, fname);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       if (res.status === 401) { top.location.href = "/login"; return; }
       if (!res.ok) throw new Error("upload failed");
@@ -70,12 +74,24 @@ function createAttachments({ listEl, fileInput, attachBtn, textarea }) {
   });
   // クリップボードからの画像/ファイル貼り付け
   textarea.addEventListener("paste", (e) => {
+    const dt = e.clipboardData;
+    if (!dt) return;
     const files = [];
-    for (const item of e.clipboardData?.items ?? []) {
-      if (item.kind === "file") {
-        const f = item.getAsFile();
-        if (f) files.push(f);
+    // items を走査。SafariではDataTransferItemListがfor...of非対応のことがあるため
+    // インデックスでアクセスする（for...ofだと例外で貼り付けが効かない）。
+    const its = dt.items;
+    if (its) {
+      for (let i = 0; i < its.length; i++) {
+        const item = its[i];
+        if (item.kind === "file") {
+          const f = item.getAsFile();
+          if (f) files.push(f);
+        }
       }
+    }
+    // フォールバック: items から拾えなくても files に入っている場合がある
+    if (!files.length && dt.files && dt.files.length) {
+      for (let i = 0; i < dt.files.length; i++) files.push(dt.files[i]);
     }
     if (files.length) {
       e.preventDefault();
