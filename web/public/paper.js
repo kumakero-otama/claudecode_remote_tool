@@ -223,12 +223,16 @@ function setupSplitter() {
 }
 setupSplitter();
 
-// 論文だけを別ウィンドウ（新規ブラウザウィンドウ/タブ）で全画面表示する。
+// 論文を「ポップアップ別ウィンドウ」（タブ/URLバー等のChrome UIなし）で開く。
+// popup=yes + 明示サイズ指定でタブではなく独立ウィンドウになる。
 const popoutBtn = document.getElementById("pdPopout");
 if (popoutBtn) {
   popoutBtn.addEventListener("click", () => {
     if (!paperId) return;
-    window.open(`/pages/paper-view?id=${encodeURIComponent(paperId)}`, `paperview_${paperId}`);
+    const w = (window.screen && screen.availWidth) || 1200;
+    const h = (window.screen && screen.availHeight) || 800;
+    const feat = `popup=yes,width=${w},height=${h},left=0,top=0,toolbar=no,location=no,menubar=no,status=no`;
+    window.open(`/pages/paper-view?id=${encodeURIComponent(paperId)}`, `paperview_${paperId}`, feat);
   });
 }
 

@@ -192,12 +192,18 @@ body.task-detail { height: 100vh; }
 #tabNote { padding: 12px 18px; }
 .tagchip.kind { background: var(--accent, #2563eb); color: #fff; }
 
-/* 論文だけの別ウィンドウ表示（全画面） */
-body.paperwin { margin: 0; height: 100vh; }
-.paperwin-root { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
-.paperwin-root .paper-frame { flex: 1 1 auto; width: 100%; height: 100%; border: 0; background: #fff; }
-.paperwin-root .paper-src { flex: 1 1 auto; width: 100%; margin: 0; padding: 14px 16px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 13px/1.6 ui-monospace, Menlo, Consolas, monospace; }
-.paperwin-root .paper-empty { margin: auto; text-align: center; padding: 24px; }
+/* 論文ポップアップ別ウィンドウ（左=論文 / 右=解説、境界は左右ドラッグ） */
+body.paperwin { margin: 0; height: 100vh; overflow: hidden; }
+.paperwin-root { display: flex; flex-direction: row; height: 100vh; width: 100vw; }
+.pv-left { flex: 0 0 50%; min-width: 120px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.pv-right { flex: 1 1 0; min-width: 120px; overflow: auto; padding: 14px 18px; border-left: 1px solid var(--line); }
+.pv-split { flex: 0 0 8px; cursor: col-resize; background: var(--line); position: relative; touch-action: none; }
+.pv-split::before { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 3px; height: 40px; border-radius: 2px; background: var(--mut, #999); opacity: .55; }
+.pv-split:hover, .pv-split.dragging { background: var(--accent, #2563eb); }
+body.paperwin.dragging iframe { pointer-events: none; }
+.pv-left .paper-frame { flex: 1 1 auto; width: 100%; height: 100%; border: 0; background: #fff; }
+.pv-left .paper-src { flex: 1 1 auto; width: 100%; margin: 0; padding: 14px 16px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 13px/1.6 ui-monospace, Menlo, Consolas, monospace; }
+.pv-left .paper-empty { margin: auto; text-align: center; padding: 24px; }
 
 /* ---------- help ---------- */
 body.help { overflow-y: auto; height: 100vh; }
