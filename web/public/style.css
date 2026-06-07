@@ -142,8 +142,16 @@ body.childpage { display: flex; flex-direction: column; height: 100vh; }
 body.task-detail { height: 100vh; }
 .td-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
 .td-title { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.td-body-wrap { padding: 12px 18px; overflow-y: auto; max-height: 40vh; border-bottom: 1px solid var(--line); }
+.td-body-wrap { flex: 0 0 auto; height: 38vh; min-height: 56px; padding: 12px 18px; overflow-y: auto; }
 .td-body { white-space: pre-wrap; word-break: break-word; font: 13px/1.6 "Noto Sans JP", monospace; margin: 8px 0 0; }
+/* 表示エリアと指示エリアの境界（ドラッグで高さ調整） */
+.td-splitter { flex: 0 0 8px; cursor: row-resize; background: var(--line); position: relative; touch-action: none; }
+.td-splitter::before { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 40px; height: 3px; border-radius: 2px; background: var(--mut, #999); opacity: .55; }
+.td-splitter:hover { background: var(--accent, #2563eb); }
+.td-splitter.dragging { background: var(--accent, #2563eb); }
+/* 本文内チェックボックスは操作可能（クリックで状態保存） */
+.markdown input[type="checkbox"] { cursor: pointer; margin-right: .4em; vertical-align: middle; }
+.markdown label { cursor: pointer; }
 /* Markdownレンダリング表示 */
 .markdown { white-space: normal; word-break: break-word; font: 14px/1.7 "Noto Sans JP", sans-serif; margin: 8px 0 0; }
 .markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { margin: 1em 0 .4em; line-height: 1.3; font-weight: 700; }
@@ -164,7 +172,7 @@ body.task-detail { height: 100vh; }
 .markdown strong { font-weight: 700; }
 .markdown table { border-collapse: collapse; margin: .6em 0; }
 .markdown th, .markdown td { border: 1px solid var(--line); padding: .3em .6em; }
-.td-chat { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.td-chat { flex: 1 1 0; display: flex; flex-direction: column; min-height: 0; }
 .td-chat-head { padding: 8px 16px; }
 .td-chatlog { flex: 1; }
 

@@ -15,7 +15,7 @@ import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
-import { listTasks, getTask, createTask, allTags } from "./tasks.js";
+import { listTasks, getTask, createTask, allTags, setCheckbox } from "./tasks.js";
 import { appendMsg, readHistory, validSpace } from "./history.js";
 import {
   loadStore,
@@ -524,7 +524,18 @@ async function main() {
     res.json(task);
   });
 
-  // タスク詳細チャット: 指示でワーカーがそのタスクMarkdownを書き換える
+  // タスク本文のチェックボックス状態を保存する（ブラウザからのクリックで呼ばれる）。
+  // body: { index: number(0始まり, 本文中のチェックボックス出現順), checked: boolean }
+  app.post("/api/tasks/:id/checkbox", requireFull, async (r, res) => {
+    const index = Number(r.body?.index);
+    const checked = !!r.body?.checked;
+    if (!Number.isInteger(index) || index < 0) return res.status(400).json({ error: "bad index" });
+    const task = await setCheckbox(r.params.id, index, checked);
+    if (!task) return res.status(404).json({ error: "not found or index out of range" });
+    res.json({ ok: true, index, checked, updated: task.updated });
+  });
+
+  // タスク詳細チャット: 指示でワーカーがそのタスクHTMLを書き換える
   app.post("/api/tasks/:id/instruct", instrLimiter, requireFull, async (r, res) => {
     const s = (r as any).session;
     const task = await getTask(r.params.id);
@@ -536,9 +547,12 @@ async function main() {
       `タスク「${task.title}」の編集作業です。\n` +
       `対象ファイル(実パス): ${task.hostPath}\n\n` +
       `【ユーザの指示】\n${text}\n\n` +
-      `この指示に従い、上記の Markdown ファイルを Edit/Write で書き換えてください。` +
+      `この指示に従い、上記ファイルを Edit/Write で書き換えてください。` +
+      `本文は Markdown ではなく HTML で書くこと（<h2>/<p>/<ul><li>/<a href>/<img src> など。画像・リンク埋め込み可）。` +
+      `チェックリストは <ul><li><label><input type="checkbox"> 項目</label></li></ul> の形で書く。` +
+      `既存チェックボックスの checked 状態（ユーザが画面で付けた印）は消さずに保持すること。` +
       `frontmatter の updated を現在時刻(ISO8601)に更新し、必要に応じて status・tags も調整してください。` +
-      `本文の見出し(# ...)は維持しつつ内容を反映すること。完了したら send_response で変更点の要約を返してください。`;
+      `完了したら send_response で変更点の要約を返してください。`;
     const composed = composeInstruction(base, attachments);
     try {
       const gw = await fetch(`${GATEWAY_API_URL}/instruction`, {

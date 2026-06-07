@@ -57,6 +57,35 @@ async function finalize(id, text) {
   await loadTask(); // タスク本文をリフレッシュ
 }
 
+// 本文(tdBody)内のチェックボックスを操作可能にし、変更をサーバへ保存する。
+// index は本文内の出現順（=サーバ側の数え方と一致）。
+function wireCheckboxes() {
+  const boxes = bodyEl.querySelectorAll('input[type="checkbox"]');
+  boxes.forEach((box, idx) => {
+    box.disabled = false;            // 変換時に付いた disabled を解除して操作可能に
+    box.dataset.cbIndex = String(idx);
+    box.addEventListener("change", onCheckboxChange);
+  });
+}
+async function onCheckboxChange(e) {
+  const box = e.currentTarget;
+  const index = Number(box.dataset.cbIndex);
+  const checked = box.checked;
+  box.disabled = true; // 保存中は二重操作を防ぐ
+  try {
+    const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/checkbox`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ index, checked }),
+    });
+    if (res.status === 401) { top.location.href = "/login"; return; }
+    if (!res.ok) throw new Error("save failed");
+  } catch {
+    box.checked = !checked; // 失敗したら表示を元に戻す
+  } finally {
+    box.disabled = false;
+  }
+}
+
 async function loadTask() {
   refreshingEl.hidden = false;
   try {
@@ -68,6 +97,7 @@ async function loadTask() {
     statusEl.textContent = t.status;
     statusEl.className = `ti-status st-${t.status}`;
     bodyEl.innerHTML = t.body == null ? "" : String(t.body); // 本文はHTMLとしてそのまま表示
+    wireCheckboxes(); // 本文内チェックボックスを操作可能にし、状態をサーバ保存
     tagsEl.textContent = "";
     t.tags.forEach((tag) => { const s = document.createElement("span"); s.className = "tagchip mini"; s.textContent = "#" + tag; tagsEl.appendChild(s); });
   } catch {
@@ -132,6 +162,49 @@ async function loadHistory() {
     for (const m of messages || []) addMessage(m.role, m.text, m.role === "me" ? "あなた" : "Claude");
   } catch {}
 }
+
+// 表示エリア(.td-body-wrap)と指示エリア(.td-chat)の境界をドラッグで上下動して高さ調整。
+function setupSplitter() {
+  const splitter = document.getElementById("tdSplitter");
+  const wrap = document.querySelector(".td-body-wrap");
+  if (!splitter || !wrap) return;
+  // 前回の高さを復元（全タスク共通）
+  const saved = Number(localStorage.getItem("ccrt.tdBodyHeight"));
+  if (saved && saved > 56) wrap.style.height = saved + "px";
+
+  let dragging = false, startY = 0, startH = 0;
+  const clientY = (e) => (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY);
+  const onMove = (e) => {
+    if (!dragging) return;
+    const dy = clientY(e) - startY;
+    const maxH = window.innerHeight - 160; // 指示エリアに最低限を残す
+    const h = Math.max(56, Math.min(startH + dy, Math.max(56, maxH)));
+    wrap.style.height = h + "px";
+    e.preventDefault();
+  };
+  const onUp = () => {
+    if (!dragging) return;
+    dragging = false;
+    splitter.classList.remove("dragging");
+    document.body.style.userSelect = "";
+    localStorage.setItem("ccrt.tdBodyHeight", String(Math.round(wrap.getBoundingClientRect().height)));
+  };
+  const onDown = (e) => {
+    dragging = true;
+    startY = clientY(e);
+    startH = wrap.getBoundingClientRect().height;
+    splitter.classList.add("dragging");
+    document.body.style.userSelect = "none";
+    e.preventDefault();
+  };
+  splitter.addEventListener("mousedown", onDown);
+  splitter.addEventListener("touchstart", onDown, { passive: false });
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("touchmove", onMove, { passive: false });
+  window.addEventListener("mouseup", onUp);
+  window.addEventListener("touchend", onUp);
+}
+setupSplitter();
 
 if (!taskId) { bodyEl.textContent = "タスクIDがありません"; }
 else { loadTask(); loadHistory().then(connect); }

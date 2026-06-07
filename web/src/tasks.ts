@@ -96,6 +96,42 @@ export async function createTask(title: string, tags: string[]): Promise<TaskMet
   return toMeta(id, fm);
 }
 
+// タスク本文(HTML)内の N番目のチェックボックスの checked 状態を保存する。
+// index は本文ソース順（=ブラウザのDOM順）での 0 始まりの番号。
+// どのタスクの・どんなチェックボックスでも「<input type=checkbox> が在れば」共通で扱える汎用処理。
+export async function setCheckbox(id: string, index: number, checked: boolean): Promise<Task | null> {
+  if (!safeId(id)) return null;
+  let raw: string;
+  try { raw = await fs.readFile(filePath(id), "utf8"); } catch { return null; }
+  const { fm, body } = splitFrontmatter(raw);
+  // 本文中の <input ... type="checkbox" ...> を出現順に収集
+  const re = /<input\b[^>]*?type\s*=\s*["']?checkbox["']?[^>]*>/gi;
+  const tags: { tag: string; start: number; end: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(body)) !== null) tags.push({ tag: m[0], start: m.index, end: m.index + m[0].length });
+  if (!Number.isInteger(index) || index < 0 || index >= tags.length) return null; // 範囲外
+  const t = tags[index];
+  let newTag = t.tag;
+  const hasChecked = /\bchecked\b/i.test(newTag);
+  if (checked && !hasChecked) {
+    newTag = newTag.replace(/\s*\/?>\s*$/, " checked>");
+  } else if (!checked && hasChecked) {
+    newTag = newTag.replace(/\s+checked(\s*=\s*["'][^"']*["'])?/i, "");
+  }
+  if (newTag === t.tag) {
+    // 変化なし。ファイルは触らず現状を返す
+    return { ...toMeta(id, fm), body, hostPath: taskHostPath(id) };
+  }
+  const newBody = body.slice(0, t.start) + newTag + body.slice(t.end);
+  const now = new Date().toISOString();
+  const newFm = { ...(fm ?? {}), updated: now };
+  const content = `---\n${stringifyYaml(newFm)}---\n${newBody}`;
+  await fs.writeFile(filePath(id), content, "utf8");
+  // ワーカー(別uid)も編集できるよう書込権限を維持
+  await fs.chmod(filePath(id), 0o666).catch(() => {});
+  return { ...toMeta(id, newFm), body: newBody, hostPath: taskHostPath(id) };
+}
+
 // 全タスクのタグ一覧（フィルタUI用）
 export async function allTags(): Promise<string[]> {
   const tasks = await listTasks();
