@@ -45,5 +45,26 @@ module.exports = {
       merge_logs: true,
       time: true,
     },
+    {
+      // paper チャネル: 論文解説の編集専任（Bash/Web禁止・papersフォルダ限定。論文ファイルはReadのみ可）
+      name: "ccrt-worker-paper",
+      script: "scripts/worker-loop.sh",
+      interpreter: "bash",
+      cwd: __dirname,
+      env: {
+        WORKER_CWD: "/home/otama/claudecode_remote_tool/papers", // 論文以外を見せない
+        WORKER_PROMPT: __dirname + "/scripts/worker-prompt-paper.md",
+        WORKER_PERMISSION_MODE: "bypassPermissions",
+        // コマンド実行・外部通信を禁止（Read は許可＝論文ファイルを読める）
+        WORKER_EXTRA_ARGS: "--disallowedTools Bash WebFetch WebSearch",
+      },
+      autorestart: true,
+      max_restarts: 100,
+      restart_delay: 2000,
+      out_file: "/home/otama/.pm2/logs/ccrt-worker-paper-out.log",
+      error_file: "/home/otama/.pm2/logs/ccrt-worker-paper-error.log",
+      merge_logs: true,
+      time: true,
+    },
   ],
 };

@@ -120,6 +120,7 @@
       <li>「Claude 通信」で送った指示は <strong>web → gateway</strong> へ。gateway が <strong>exec チャネル</strong>に積む。</li>
       <li><strong>ccrt-worker(exec)</strong> が MCP で指示を受け取り、サーバ上で実行 → 結果を gateway 経由・SSE でブラウザへ返す。</li>
       <li>「タスク管理」での編集指示は <strong>task チャネル</strong>へ。<strong>ccrt-worker-task</strong> だけが受け取り、<strong>tasks/ の .md を編集するだけ</strong>。</li>
+      <li>「論文管理」での指示は <strong>paper チャネル</strong>へ。<strong>ccrt-worker-paper</strong> だけが受け取り、<strong>papers/ の論文を Read して解説 HTML を編集するだけ</strong>（実行・外部通信は不可）。</li>
     </ol>
 
     <h2>セキュリティと「実行ロック」</h2>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>論文詳細</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="childpage paper-detail">
+  <div class="td-bar">
+    <a href="/pages/papers" class="btn ghost small">← 一覧</a>
+    <span id="pdTitle" class="td-title"></span>
+    <span id="pdStatus" class="ti-status"></span>
+    <a id="pdOpen" class="btn ghost small" target="_blank" rel="noopener" hidden>↗ 元</a>
+    <span id="pdRefreshing" class="small muted" hidden>更新中…</span>
+  </div>
+
+  <div class="pd-top">
+    <div class="tabbar">
+      <button type="button" class="tab active" data-tab="view">📄 論文</button>
+      <button type="button" class="tab" data-tab="note">📝 解説</button>
+      <div id="pdTags" class="ti-tags pd-tags"></div>
+    </div>
+    <div id="tabView" class="tabpane paper-view active"></div>
+    <div id="tabNote" class="tabpane td-body markdown"></div>
+  </div>
+
+  <div id="pdSplitter" class="td-splitter" title="ドラッグで上の高さを調整"></div>
+
+  <div class="td-chat">
+    <div class="td-chat-head small muted">この論文への指示（Claudeが論文を読んで解説を書き換えます）</div>
+    <div id="chat" class="chat td-chatlog"></div>
+    <form id="composer" class="composer">
+      <div id="attachments" class="attachments"></div>
+      <div class="composer-row">
+        <button id="attachBtn" type="button" class="btn ghost attach" title="ファイル・画像を添付">📎</button>
+        <textarea id="input" rows="2" placeholder="例: この論文の要点を解説して / 手法を図解して（Ctrl/Shift+Enterで送信・Enterで改行・画像ペースト可）"></textarea>
+        <button id="send" class="btn primary" type="button">送信</button>
+      </div>
+      <input id="fileInput" type="file" multiple hidden />
+    </form>
+  </div>
+
+  <script src="/attachments.js"></script>
+  <script src="/paper.js"></script>
+</body>
+</html>

@@ -8,9 +8,9 @@ const MAX_RETURN = 300;
 
 export type ChatMsg = { role: "me" | "claude"; text: string; ts: number };
 
-// 履歴キー: "<userkey>__exec" または "<userkey>__task-<id>"
+// 履歴キー: "<userkey>__exec" / "<userkey>__task-<id>" / "<userkey>__paper-<id>"
 export function validSpace(space: string): boolean {
-  return /^[\w-]+__(exec|task-[\w-]+)$/.test(space) && space.length < 200;
+  return /^[\w-]+__(exec|task-[\w-]+|paper-[\w-]+)$/.test(space) && space.length < 200;
 }
 
 function fileFor(space: string): string {

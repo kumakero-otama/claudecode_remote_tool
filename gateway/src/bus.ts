@@ -1,8 +1,8 @@
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
 
-// チャネル: "exec"=Claude通信(実行可) / "task"=タスク編集(制限ワーカー)
-export type Channel = "exec" | "task";
+// チャネル: "exec"=Claude通信(実行可) / "task"=タスク編集(制限ワーカー) / "paper"=論文解説編集(制限ワーカー)
+export type Channel = "exec" | "task" | "paper";
 
 // Webアプリ → Claude へ渡す指示
 export type Instruction = { id: string; text: string; from?: string; channel: Channel; ts: number };
@@ -103,6 +103,7 @@ class Bus extends EventEmitter {
     return {
       workerOnline: this.workerOnline("exec"), // チャットの接続表示用
       taskWorkerOnline: this.workerOnline("task"),
+      paperWorkerOnline: this.workerOnline("paper"),
       busy: this._busy,
     };
   }

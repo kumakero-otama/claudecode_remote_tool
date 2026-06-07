@@ -98,7 +98,7 @@ api.get("/status", (_req, res) => {
 api.post("/instruction", (req, res) => {
   const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
   const from = typeof req.body?.from === "string" ? req.body.from : undefined;
-  const channel = req.body?.channel === "task" ? "task" : "exec";
+  const channel = req.body?.channel === "task" ? "task" : req.body?.channel === "paper" ? "paper" : "exec";
   if (!text) {
     res.status(400).json({ error: "text is required" });
     return;

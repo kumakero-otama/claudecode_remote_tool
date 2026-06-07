@@ -16,6 +16,17 @@ import {
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
 import { listTasks, getTask, createTask, allTags, setCheckbox } from "./tasks.js";
+import {
+  listPapers,
+  getPaper,
+  createPaper,
+  deletePaper,
+  newPaperId,
+  ensurePaperFilesDir,
+  paperFileHostPath,
+  allTags as allPaperTags,
+  type PaperKind,
+} from "./papers.js";
 import { appendMsg, readHistory, validSpace } from "./history.js";
 import {
   loadStore,
@@ -118,6 +129,22 @@ const uploadStorage = multer.diskStorage({
   },
 });
 const upload = multer({ storage: uploadStorage, limits: { fileSize: 25 * 1024 * 1024 } });
+
+// 論文ファイルのアップロード（メモリ受け→papers/files へ保存）。PDF等が大きめなので上限も大きく。
+const paperUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+// mime/拡張子から論文ファイルの種別と保存拡張子を推定
+function pickPaperKind(mime: string, urlOrName: string): { kind: PaperKind; ext: string } {
+  const m = (mime || "").toLowerCase();
+  const lower = (urlOrName || "").toLowerCase();
+  const ext = (lower.match(/\.([a-z0-9]{1,8})(?:[?#]|$)/) || [])[1] || "";
+  if (m.includes("application/pdf") || ext === "pdf") return { kind: "pdf", ext: "pdf" };
+  if (ext === "tex" || m.includes("x-tex") || m.includes("x-latex")) return { kind: "tex", ext: "tex" };
+  if (m.includes("text/html") || ext === "html" || ext === "htm") return { kind: "html", ext: "html" };
+  if (m.startsWith("text/") || ["txt", "md", "bib", "csv", "json"].includes(ext)) return { kind: "text", ext: ext || "txt" };
+  if (m.includes("postscript")) return { kind: "other", ext: "ps" };
+  return { kind: "other", ext: ext || "bin" };
+}
 
 // 添付の実パスを指示文に追記（ワーカーが Read ツールで参照できるように）
 function composeInstruction(
@@ -231,7 +258,7 @@ async function main() {
           fontSrc: ["'self'"],
           baseUri: ["'none'"],
           formAction: ["'self'"],
-          frameSrc: ["'self'"], // ポータルが子ページをiframe表示
+          frameSrc: ["'self'", "https:"], // 子ページ(self)＋論文タブで外部URLをライブ埋め込み(https)
           frameAncestors: ["'self'"], // 自サイトのみ frame 可（外部クリックジャッキングは拒否）
           objectSrc: ["'none'"],
         },
@@ -480,7 +507,7 @@ async function main() {
   app.get("/api/history", requireFull, async (r, res) => {
     const s = (r as any).session;
     const space = String(r.query.space ?? "");
-    if (!/^(exec|task-[\w-]+)$/.test(space)) return res.status(400).json({ error: "bad space" });
+    if (!/^(exec|task-[\w-]+|paper-[\w-]+)$/.test(space)) return res.status(400).json({ error: "bad space" });
     res.json({ messages: await readHistory(histKey(s.email, space)) });
   });
 
@@ -488,7 +515,7 @@ async function main() {
   app.get("/api/events", requireFull, async (r, res) => {
     const s = (r as any).session;
     const space = String(r.query.space ?? "exec");
-    if (!/^(exec|task-[\w-]+)$/.test(space)) return res.status(400).end();
+    if (!/^(exec|task-[\w-]+|paper-[\w-]+)$/.test(space)) return res.status(400).end();
     res.set({
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
@@ -573,6 +600,140 @@ async function main() {
     }
   });
 
+  /* ----------------------- 論文管理 ----------------------- */
+  app.get("/api/papers", requireFull, async (_r, res) => {
+    res.json({ papers: await listPapers(), tags: await allPaperTags() });
+  });
+
+  // 論文アイテム追加: multipart で file、または JSON 互換で url を受ける。
+  app.post("/api/papers", instrLimiter, requireFull, paperUpload.single("file"), async (r, res) => {
+    const f = (r as any).file as Express.Multer.File | undefined;
+    const url = typeof r.body?.url === "string" ? r.body.url.trim() : "";
+    const tags = typeof r.body?.tags === "string"
+      ? r.body.tags.split(",").map((s: string) => s.trim()).filter(Boolean)
+      : Array.isArray(r.body?.tags) ? r.body.tags.map((t: any) => String(t).trim()).filter(Boolean) : [];
+    let title = typeof r.body?.title === "string" ? r.body.title.trim() : "";
+
+    try {
+      const filesDir = await ensurePaperFilesDir();
+      if (f) {
+        // --- ファイルアップロード ---
+        const name = Buffer.from(f.originalname || "file", "latin1").toString("utf8");
+        const { kind, ext } = pickPaperKind(f.mimetype, name);
+        if (!title) title = name.replace(/\.[a-z0-9]{1,8}$/i, "") || name;
+        const id = await newPaperId(title);
+        const fname = `${id}.${ext}`;
+        await fs.promises.writeFile(path.join(filesDir, fname), f.buffer);
+        await fs.promises.chmod(path.join(filesDir, fname), 0o666).catch(() => {});
+        const meta = await createPaper({ id, title, tags, kind, file: fname, filemime: f.mimetype || null });
+        return res.json(meta);
+      }
+      if (url) {
+        if (!/^https?:\/\//i.test(url)) return res.status(400).json({ error: "bad url" });
+        if (!title) {
+          try { const u = new URL(url); title = decodeURIComponent((u.pathname.split("/").filter(Boolean).pop() || u.hostname)); } catch { title = url; }
+        }
+        const id = await newPaperId(title);
+        // 取得を試みる（PDF等はDLして表示、HTMLページはライブ埋め込み＋スナップショット保存）
+        let kind: PaperKind = "url";
+        let file: string | null = null;
+        let filemime: string | null = null;
+        try {
+          const resp = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(20000) });
+          if (resp.ok) {
+            const ct = resp.headers.get("content-type") || "";
+            const picked = pickPaperKind(ct, url);
+            const buf = Buffer.from(await resp.arrayBuffer());
+            if (picked.kind === "html") {
+              // HTMLページ: 表示はライブURL。ワーカー用にスナップショットだけ保存。
+              kind = "url";
+              file = `${id}.html`;
+              filemime = "text/html";
+            } else {
+              // PDF / tex / text / other: DLして表示
+              kind = picked.kind;
+              file = `${id}.${picked.ext}`;
+              filemime = ct || null;
+            }
+            await fs.promises.writeFile(path.join(filesDir, file), buf);
+            await fs.promises.chmod(path.join(filesDir, file), 0o666).catch(() => {});
+          }
+        } catch {
+          // 取得失敗時はURLのみ（ライブ埋め込み）で登録
+          kind = "url"; file = null; filemime = null;
+        }
+        const meta = await createPaper({ id, title, tags, kind, source: url, file, filemime });
+        return res.json(meta);
+      }
+      return res.status(400).json({ error: "file or url required" });
+    } catch (e) {
+      return res.status(500).json({ error: "create failed" });
+    }
+  });
+
+  app.get("/api/papers/:id", requireFull, async (r, res) => {
+    const paper = await getPaper(r.params.id);
+    if (!paper) return res.status(404).json({ error: "not found" });
+    res.json(paper);
+  });
+
+  // 保存済みの論文ファイルを配信（PDFはブラウザがインライン表示／Range対応）
+  app.get("/api/papers/:id/file", requireFull, async (r, res) => {
+    const paper = await getPaper(r.params.id);
+    if (!paper || !paper.file) return res.status(404).json({ error: "no file" });
+    const filesDir = await ensurePaperFilesDir();
+    const resolved = path.resolve(filesDir, paper.file);
+    if (!resolved.startsWith(path.resolve(filesDir) + path.sep)) return res.status(400).end();
+    res.sendFile(resolved, paper.filemime ? { headers: { "Content-Type": paper.filemime } } : {});
+  });
+
+  app.delete("/api/papers/:id", requireFull, async (r, res) => {
+    const ok = await deletePaper(r.params.id);
+    if (!ok) return res.status(404).json({ error: "not found" });
+    res.json({ ok: true });
+  });
+
+  // 論文詳細チャット: 指示でワーカーが論文を読み、解説HTMLを書き換える
+  app.post("/api/papers/:id/instruct", instrLimiter, requireFull, async (r, res) => {
+    const s = (r as any).session;
+    const paper = await getPaper(r.params.id);
+    if (!paper) return res.status(404).json({ error: "not found" });
+    const text = typeof r.body?.text === "string" ? r.body.text.trim() : "";
+    const attachments = Array.isArray(r.body?.attachments) ? r.body.attachments : [];
+    if (!text && attachments.length === 0) return res.status(400).json({ error: "empty" });
+    const fileLine = paper.fileHostPath
+      ? `論文ファイル(実パス): ${paper.fileHostPath}\n  → まず Read ツールでこの論文を読み、内容を理解してから解説を書いてください。\n`
+      : paper.source
+        ? `論文URL: ${paper.source}\n  → このセッションは外部アクセス不可のため本文は取得できません。ユーザの説明や既知情報の範囲で解説してください。\n`
+        : "";
+    const base =
+      `論文「${paper.title}」の解説編集です。\n` +
+      `解説ファイル(実パス): ${paper.hostPath}\n` +
+      fileLine +
+      `\n【ユーザの指示】\n${text}\n\n` +
+      `この指示に従い、解説ファイル(上記 .md)の本文を Edit/Write で HTML として記載/更新してください。` +
+      `frontmatter は維持し updated を現在時刻(ISO8601)に更新、必要に応じて status・tags も調整。` +
+      `完了したら send_response で変更点の要約を返してください。`;
+    const composed = composeInstruction(base, attachments);
+    try {
+      const gw = await fetch(`${GATEWAY_API_URL}/instruction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_TOKEN}` },
+        body: JSON.stringify({ text: composed, from: s.email, channel: "paper" }),
+      });
+      if (!gw.ok) return res.status(502).json({ error: "gateway error" });
+      const out = await gw.json();
+      const space = `paper-${r.params.id}`;
+      if (out?.id) {
+        rememberSpace(out.id, space, s.email);
+        await appendMsg(histKey(s.email, space), { role: "me", text: userLabel(text, attachments), ts: Date.now() });
+      }
+      res.json(out);
+    } catch {
+      res.status(502).json({ error: "gateway unreachable" });
+    }
+  });
+
   /* ----------------------- gateway への GET プロキシ（status のみ） ----------------------- */
   const gwProxy = createProxyMiddleware({
     target: GATEWAY_API_URL,
@@ -604,6 +765,8 @@ async function main() {
   app.get("/pages/server", requireFull, (_r, res) => res.sendFile(view("pages/server.html")));
   app.get("/pages/tasks", requireFull, (_r, res) => res.sendFile(view("pages/tasks.html")));
   app.get("/pages/task", requireFull, (_r, res) => res.sendFile(view("pages/task.html")));
+  app.get("/pages/papers", requireFull, (_r, res) => res.sendFile(view("pages/papers.html")));
+  app.get("/pages/paper", requireFull, (_r, res) => res.sendFile(view("pages/paper.html")));
   app.get("/pages/help", requireFull, (_r, res) => res.sendFile(view("pages/help.html")));
 
   app.listen(WEB_PORT, () => {

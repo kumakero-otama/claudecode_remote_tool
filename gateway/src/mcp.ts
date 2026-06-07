@@ -20,12 +20,12 @@ export function buildMcpServer(): McpServer {
       title: "Wait for the next remote instruction",
       description:
         "Long-poll for the next instruction on a channel. Blocks up to timeout_ms (default 25s). " +
-        "channel: 'exec' (general Claude chat) or 'task' (task-list editing only). " +
+        "channel: 'exec' (general Claude chat), 'task' (task-list editing only), or 'paper' (paper explanation editing only). " +
         "Returns JSON {instruction_id, text} when an instruction arrives, or NO_INSTRUCTION on timeout. " +
         "On timeout, simply call this tool again to keep listening.",
       inputSchema: {
         timeout_ms: z.number().int().min(1000).max(60_000).optional(),
-        channel: z.enum(["exec", "task"]).optional(),
+        channel: z.enum(["exec", "task", "paper"]).optional(),
       },
     },
     async ({ timeout_ms, channel }) => {

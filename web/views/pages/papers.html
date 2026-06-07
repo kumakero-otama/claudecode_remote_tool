@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>論文管理</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="childpage">
+  <div class="tasks-header">
+    <h1>論文管理</h1>
+    <form id="addUrlForm" class="newtask">
+      <input id="newUrl" type="url" placeholder="論文URL（PDF直リンク等はDLして表示）" />
+      <input id="newUrlTags" type="text" placeholder="タグ(カンマ区切り)" />
+      <button class="btn primary small" type="submit">URLで追加</button>
+    </form>
+    <form id="addFileForm" class="newtask">
+      <input id="newFile" type="file" accept=".pdf,.tex,.html,.htm,.txt,.md,.bib,.ps,application/pdf" />
+      <input id="newFileTags" type="text" placeholder="タグ(カンマ区切り)" />
+      <button class="btn primary small" type="submit">ファイルで追加</button>
+    </form>
+    <div id="addStatus" class="small muted" hidden>追加中…</div>
+  </div>
+  <div id="tagFilter" class="tagfilter"></div>
+  <ul id="paperList" class="tasklist"></ul>
+  <script src="/papers.js"></script>
+</body>
+</html>

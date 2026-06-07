@@ -40,6 +40,9 @@ services:
       # タスク(Markdown): コンテナ内パス と ワーカー(ホスト)が編集する実パス
       TASKS_DIR: "/tasks"
       HOST_TASKS_DIR: ${HOST_TASKS_DIR:-/home/otama/claudecode_remote_tool/tasks}
+      # 論文(解説md＋論文ファイル): コンテナ内パス と ワーカー(ホスト)が読む/編集する実パス
+      PAPERS_DIR: "/papers"
+      HOST_PAPERS_DIR: ${HOST_PAPERS_DIR:-/home/otama/claudecode_remote_tool/papers}
     ports:
       # Tailscale Funnel がこのポートを公開する。127.0.0.1 限定。
       - "127.0.0.1:8080:8080"
@@ -52,6 +55,8 @@ services:
       - ./uploads:/uploads
       # タスクMarkdown: ホスト側に置き、ワーカー(ホストのClaude)が直接編集できるようにする
       - ./tasks:/tasks
+      # 論文(解説md＋論文ファイル): ホスト側に置き、論文ワーカー(ホストのClaude)が直接読める/編集できるようにする
+      - ./papers:/papers
     depends_on: [gateway]
     networks: [ccrt]
 
