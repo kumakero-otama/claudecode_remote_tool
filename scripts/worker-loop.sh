@@ -29,6 +29,10 @@ PERMISSION_MODE="${WORKER_PERMISSION_MODE:-auto}"
 # 追加の claude 引数（例: タスク/論文ワーカーで --disallowedTools Bash ...）。空白区切り。
 EXTRA_ARGS="${WORKER_EXTRA_ARGS:-}"
 SESSION_ID="${WORKER_SESSION_ID:-}"
+# 使用モデル（例: "sonnet" / "opus"）。未設定なら claude の既定モデル。
+MODEL="${WORKER_MODEL:-}"
+MODEL_ARGS=""
+[ -n "$MODEL" ] && MODEL_ARGS="--model $MODEL"
 
 # 常駐ワーカーの説明 + 手順を system prompt に載せる（会話本体は文脈保持に使う）
 SYS_PROMPT="あなたはバックグラウンドの常駐リモートワーカーとして headless 実行されています。
@@ -41,7 +45,7 @@ ${INSTRUCTIONS}"
 # 各サイクルで送る短いトリガ（手順は system prompt 側にある）
 CYCLE_PROMPT="次の1サイクルを実行してください（手順はシステムプロンプト参照。前サイクルまでの文脈は保持されています）。"
 
-echo "[worker] start: cwd=$WORK_DIR prompt=$PROMPT_FILE session=${SESSION_ID:-none} perm=$PERMISSION_MODE extra=[$EXTRA_ARGS]"
+echo "[worker] start: cwd=$WORK_DIR prompt=$PROMPT_FILE session=${SESSION_ID:-none} perm=$PERMISSION_MODE model=${MODEL:-default} extra=[$EXTRA_ARGS]"
 
 # セッション作成済みマーカー（pm2再起動後も --resume を使うため永続化）
 MARKER=""
@@ -56,6 +60,7 @@ run_cycle() {
   timeout --signal=TERM "$MAX_SECONDS" \
     claude -p "$CYCLE_PROMPT" \
       --permission-mode "$PERMISSION_MODE" \
+      $MODEL_ARGS \
       $EXTRA_ARGS \
       --append-system-prompt "$SYS_PROMPT" \
       "$@" \
