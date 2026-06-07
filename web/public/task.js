@@ -109,8 +109,8 @@ composer.addEventListener("submit", (e) => e.preventDefault());
 input.addEventListener("keydown", (e) => {
   // IME変換確定のEnter（変換中 / isComposing / keyCode 229）では送信しない
   if (composing || e.isComposing || e.keyCode === 229) return;
-  // Ctrl+Enter（Macは Cmd+Enter）で送信。単独Enterはtextareaの改行に任せる
-  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
+  // Ctrl+Enter（Macは Cmd+Enter）または Shift+Enter で送信。単独Enterはtextareaの改行に任せる
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey || e.shiftKey)) { e.preventDefault(); send(); }
 });
 
 async function loadHistory() {
