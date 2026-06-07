@@ -15,7 +15,7 @@ module.exports = {
         WORKER_CWD: "/home/otama",
         WORKER_PROMPT: __dirname + "/scripts/worker-prompt.md",
         WORKER_PERMISSION_MODE: "auto", // autoモード（分類器が自動判定）
-        WORKER_SESSION_ID: "4c084950-86bd-4ead-8da4-0c82114eaab2", // 固定IDで会話文脈を継続
+        // 文脈引継ぎは web 側の「履歴注入」で行うため、ワーカーはステートレス（session-id無し）
       },
       autorestart: true,
       max_restarts: 100,
@@ -36,7 +36,7 @@ module.exports = {
         WORKER_PROMPT: __dirname + "/scripts/worker-prompt-task.md",
         WORKER_PERMISSION_MODE: "auto", // autoモード（分類器が自動判定）
         WORKER_MODEL: "sonnet", // タスク編集はSonnetで十分（コスト/速度最適）
-        WORKER_SESSION_ID: "22b81544-0d88-416e-964e-2e662f700832", // 固定IDで会話文脈を継続
+        // 文脈引継ぎは web 側の「履歴注入」で行うため、ワーカーはステートレス（session-id無し）
         // コマンド実行・外部通信を物理的に禁止（実行ロックの要）
         WORKER_EXTRA_ARGS: "--disallowedTools Bash WebFetch WebSearch",
       },
@@ -59,7 +59,7 @@ module.exports = {
         WORKER_PROMPT: __dirname + "/scripts/worker-prompt-paper.md",
         WORKER_PERMISSION_MODE: "auto", // autoモード（分類器が自動判定）
         WORKER_MODEL: "sonnet", // 論文解説編集はSonnetで（コスト/速度最適）
-        WORKER_SESSION_ID: "f24144c2-b6c5-4bf0-a0f6-992ee6026411", // 固定IDで会話文脈を継続
+        // 文脈引継ぎは web 側の「履歴注入」で行うため、ワーカーはステートレス（session-id無し）
         // コマンド実行・外部通信を禁止（Read は許可＝論文ファイルを読める）
         WORKER_EXTRA_ARGS: "--disallowedTools Bash WebFetch WebSearch",
       },

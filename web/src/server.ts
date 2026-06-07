@@ -170,6 +170,25 @@ function userLabel(text: string, attachments: Array<{ name?: string }>): string 
   return text;
 }
 
+// 直近のやり取りを「文脈」として指示文へ注入する（新規セッションでも会話の流れを引き継ぐため）。
+// スレッド(space)単位なので、タスク/論文/チャットの文脈が混ざらない。
+const HISTORY_CONTEXT_MAX = 12; // 注入する直近メッセージ数（多すぎるとトークン浪費）
+function stripTags(s: string): string {
+  return String(s).replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/gi, " ").replace(/\s+/g, " ").trim();
+}
+async function historyContext(email: string, space: string, maxMsgs = HISTORY_CONTEXT_MAX): Promise<string> {
+  const msgs = await readHistory(histKey(email, space));
+  if (!msgs.length) return "";
+  const recent = msgs.slice(-maxMsgs);
+  const lines = recent.map((m) => {
+    const who = m.role === "me" ? "ユーザ" : "あなた(Claude)";
+    let t = stripTags(m.text);
+    if (t.length > 1000) t = t.slice(0, 1000) + " …(略)";
+    return `- ${who}: ${t}`;
+  });
+  return `これまでのやり取り（このスレッドの直近${recent.length}件。文脈把握用。再生成は不要）:\n${lines.join("\n")}\n\n`;
+}
+
 // instruction_id → {space, owner(email), ts}
 const instrSpace = new Map<string, { space: string; owner: string; ts: number }>();
 function rememberSpace(id: string, space: string, owner: string) {
@@ -484,7 +503,9 @@ async function main() {
     const text = typeof r.body?.text === "string" ? r.body.text.trim() : "";
     const attachments = Array.isArray(r.body?.attachments) ? r.body.attachments : [];
     if (!text && attachments.length === 0) return res.status(400).json({ error: "empty" });
-    const composed = composeInstruction(text, attachments);
+    const hist = await historyContext(s.email, "exec");
+    const body = hist ? `${hist}---\n【今回の指示】\n${text}` : text;
+    const composed = composeInstruction(body, attachments);
     try {
       const gw = await fetch(`${GATEWAY_API_URL}/instruction`, {
         method: "POST",
@@ -570,10 +591,12 @@ async function main() {
     const text = typeof r.body?.text === "string" ? r.body.text.trim() : "";
     const attachments = Array.isArray(r.body?.attachments) ? r.body.attachments : [];
     if (!text && attachments.length === 0) return res.status(400).json({ error: "empty" });
+    const hist = await historyContext(s.email, `task-${r.params.id}`);
     const base =
       `タスク「${task.title}」の編集作業です。\n` +
       `対象ファイル(実パス): ${task.hostPath}\n\n` +
-      `【ユーザの指示】\n${text}\n\n` +
+      hist +
+      `【今回のユーザの指示】\n${text}\n\n` +
       `この指示に従い、上記ファイルを Edit/Write で書き換えてください。` +
       `本文は Markdown ではなく HTML で書くこと（<h2>/<p>/<ul><li>/<a href>/<img src> など。画像・リンク埋め込み可）。` +
       `チェックリストは <ul><li><label><input type="checkbox"> 項目</label></li></ul> の形で書く。` +
@@ -713,11 +736,12 @@ async function main() {
       : paper.source
         ? `論文URL: ${paper.source}\n  → このセッションは外部アクセス不可のため本文は取得できません。ユーザの説明や既知情報の範囲で解説してください。\n`
         : "";
+    const hist = await historyContext(s.email, `paper-${r.params.id}`);
     const base =
       `論文「${paper.title}」の解説編集です。\n` +
       `解説ファイル(実パス): ${paper.hostPath}\n` +
       fileLine +
-      `\n【ユーザの指示】\n${text}\n\n` +
+      `\n${hist}【今回のユーザの指示】\n${text}\n\n` +
       `この指示に従い、解説ファイル(上記 .md)の本文を Edit/Write で HTML として記載/更新してください。` +
       `frontmatter は維持し updated を現在時刻(ISO8601)に更新、必要に応じて status・tags も調整。` +
       `完了したら send_response で変更点の要約を返してください。`;

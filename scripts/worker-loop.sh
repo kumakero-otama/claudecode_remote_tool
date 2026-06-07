@@ -36,14 +36,15 @@ MODEL_ARGS=""
 
 # 常駐ワーカーの説明 + 手順を system prompt に載せる（会話本体は文脈保持に使う）
 SYS_PROMPT="あなたはバックグラウンドの常駐リモートワーカーとして headless 実行されています。
-前サイクルまでの会話文脈は保持されます（このワーカーへの過去のやり取りを覚えています）。
+各セッションは独立（ステートレス）ですが、過去のやり取りが必要な場合は、受け取る指示文の中に
+『これまでのやり取り』としてスレッドの履歴が含まれます。それを文脈として処理してください。
 以下の手順に従って動作してください。
 
 ===== ワーカー手順 =====
 ${INSTRUCTIONS}"
 
 # 各サイクルで送る短いトリガ（手順は system prompt 側にある）
-CYCLE_PROMPT="次の1サイクルを実行してください（手順はシステムプロンプト参照。前サイクルまでの文脈は保持されています）。"
+CYCLE_PROMPT="次の1サイクルを実行してください（手順はシステムプロンプト参照）。"
 
 echo "[worker] start: cwd=$WORK_DIR prompt=$PROMPT_FILE session=${SESSION_ID:-none} perm=$PERMISSION_MODE model=${MODEL:-default} extra=[$EXTRA_ARGS]"
 
