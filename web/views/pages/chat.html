@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claude 通信</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="childpage">
+  <div class="child-statusbar">
+    <span id="worker" class="dot">●</span>
+    <span id="workerText" class="small muted">確認中…</span>
+  </div>
+
+  <main id="chat" class="chat"></main>
+
+  <form id="composer" class="composer">
+    <div id="attachments" class="attachments"></div>
+    <div class="composer-row">
+      <button id="attachBtn" type="button" class="btn ghost attach" title="ファイル・画像を添付">📎</button>
+      <textarea id="input" rows="2" placeholder="Claude への指示を入力（Ctrl+Enterで送信 / Enterで改行 / 画像はペースト可）"></textarea>
+      <button id="send" class="btn primary" type="submit">送信</button>
+    </div>
+    <input id="fileInput" type="file" multiple hidden />
+  </form>
+
+  <script src="/attachments.js"></script>
+  <script src="/chat.js"></script>
+</body>
+</html>

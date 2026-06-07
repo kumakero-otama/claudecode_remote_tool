@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ログイン — Claude Code Remote</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="center">
+  <main class="card">
+    <h1>Claude Code Remote</h1>
+    <p class="muted">許可された Google アカウントでログインします。</p>
+    <a class="btn primary" href="/auth/google">Google でログイン</a>
+    <hr />
+    <p class="muted small">パスキー登録済みの端末はこちら：</p>
+    <button id="passkey" class="btn ghost">パスキーでログイン</button>
+    <p id="msg" class="error"></p>
+  </main>
+  <script src="/vendor/simplewebauthn-browser.umd.min.js"></script>
+  <script src="/login.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>タスク詳細</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="childpage task-detail">
+  <div class="td-bar">
+    <a href="/pages/tasks" class="btn ghost small">← 一覧</a>
+    <span id="tdTitle" class="td-title"></span>
+    <span id="tdStatus" class="ti-status"></span>
+    <span id="tdRefreshing" class="small muted" hidden>更新中…</span>
+  </div>
+
+  <div class="td-body-wrap">
+    <div id="tdTags" class="ti-tags"></div>
+    <pre id="tdBody" class="td-body"></pre>
+  </div>
+
+  <div class="td-chat">
+    <div class="td-chat-head small muted">このタスクへの指示（Claudeが内容を書き換えます）</div>
+    <div id="chat" class="chat td-chatlog"></div>
+    <form id="composer" class="composer">
+      <div id="attachments" class="attachments"></div>
+      <div class="composer-row">
+        <button id="attachBtn" type="button" class="btn ghost attach" title="ファイル・画像を添付">📎</button>
+        <textarea id="input" rows="2" placeholder="例: 仕様の章を追記して / 完了にして（Ctrl+Enterで送信・Enterで改行・画像ペースト可）"></textarea>
+        <button id="send" class="btn primary" type="submit">送信</button>
+      </div>
+      <input id="fileInput" type="file" multiple hidden />
+    </form>
+  </div>
+
+  <script src="/attachments.js"></script>
+  <script src="/task.js"></script>
+</body>
+</html>

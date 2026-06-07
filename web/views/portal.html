@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ポータル — Claude Code Remote</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="portal">
+  <header class="topbar">
+    <button id="menuBtn" class="btn ghost small only-mobile" aria-label="メニュー">☰</button>
+    <div class="brand">Claude Code Remote</div>
+    <div class="spacer"></div>
+    <span id="userEmail" class="small muted"></span>
+    <button id="devicesBtn" class="btn ghost small">端末</button>
+    <button id="logout" class="btn ghost small">ログアウト</button>
+  </header>
+
+  <div class="layout">
+    <nav id="sidebar" class="sidebar">
+      <a class="navlink" data-src="/pages/chat" data-title="Claude 通信">💬 Claude 通信</a>
+      <a class="navlink" data-src="/pages/server" data-title="サーバ情報">🖥️ サーバ情報</a>
+      <a class="navlink" data-src="/pages/tasks" data-title="タスク管理">✅ タスク管理</a>
+      <a class="navlink" data-src="/pages/help" data-title="ヘルプ / 説明">❓ ヘルプ / 説明</a>
+    </nav>
+    <section class="content">
+      <iframe id="frame" class="childframe" title="子ページ"></iframe>
+    </section>
+  </div>
+
+  <dialog id="devicesDialog">
+    <h2>登録端末</h2>
+    <ul id="deviceList"></ul>
+    <form method="dialog"><button class="btn ghost">閉じる</button></form>
+  </dialog>
+
+  <script src="/portal.js"></script>
+</body>
+</html>

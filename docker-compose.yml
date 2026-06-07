@@ -1,0 +1,63 @@
+services:
+  gateway:
+    build: ./gateway
+    image: ccrt-gateway
+    container_name: ccrt-gateway
+    restart: unless-stopped
+    environment:
+      MCP_TOKEN: ${MCP_TOKEN:?set in .env}
+      GATEWAY_API_TOKEN: ${GATEWAY_API_TOKEN:?set in .env}
+      MCP_PORT: "8765"
+      API_PORT: "8766"
+      INSTRUCTION_TIMEOUT_MS: "25000"
+    ports:
+      # MCP は Claude Code(ホスト) からのみ。127.0.0.1 限定で外部非公開。
+      - "127.0.0.1:8765:8765"
+    networks: [ccrt]
+
+  web:
+    build: ./web
+    image: ccrt-web
+    container_name: ccrt-web
+    restart: unless-stopped
+    environment:
+      WEB_PORT: "8080"
+      PUBLIC_URL: ${PUBLIC_URL:?set in .env}
+      GATEWAY_API_URL: "http://gateway:8766"
+      GATEWAY_API_TOKEN: ${GATEWAY_API_TOKEN:?set in .env}
+      SESSION_SECRET: ${SESSION_SECRET:?set in .env}
+      SESSION_EPOCH: ${SESSION_EPOCH:-1}
+      REQUIRE_PASSKEY: ${REQUIRE_PASSKEY:-true}
+      ALLOWED_EMAILS: ${ALLOWED_EMAILS:?set in .env}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      SERVER_DASHBOARD_URL: ${SERVER_DASHBOARD_URL:-http://host.docker.internal:8088}
+      NODE_ENV: ${NODE_ENV:-production}
+      ALLOW_DEV_ENROLL: ${ALLOW_DEV_ENROLL:-false}
+      # 添付ファイル: コンテナ内保存先 と ワーカー(ホスト)が参照する実パス
+      UPLOADS_DIR: "/uploads"
+      HOST_UPLOADS_DIR: ${HOST_UPLOADS_DIR:-/home/otama/claudecode_remote_tool/uploads}
+      # タスク(Markdown): コンテナ内パス と ワーカー(ホスト)が編集する実パス
+      TASKS_DIR: "/tasks"
+      HOST_TASKS_DIR: ${HOST_TASKS_DIR:-/home/otama/claudecode_remote_tool/tasks}
+    ports:
+      # Tailscale Funnel がこのポートを公開する。127.0.0.1 限定。
+      - "127.0.0.1:8080:8080"
+    extra_hosts:
+      # コンテナからホスト(:8088 ダッシュボード等)へ到達するため
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ccrt-data:/data
+      # 添付ファイル: ホスト側に保存し、ワーカー(ホストのClaude)が直接読めるようにする
+      - ./uploads:/uploads
+      # タスクMarkdown: ホスト側に置き、ワーカー(ホストのClaude)が直接編集できるようにする
+      - ./tasks:/tasks
+    depends_on: [gateway]
+    networks: [ccrt]
+
+networks:
+  ccrt:
+    driver: bridge
+
+volumes:
+  ccrt-data:

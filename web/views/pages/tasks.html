@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>タスク管理</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="childpage">
+  <div class="tasks-header">
+    <h1>タスク管理</h1>
+    <form id="newTaskForm" class="newtask">
+      <input id="newTitle" type="text" placeholder="新しいタスク名" />
+      <input id="newTags" type="text" placeholder="タグ(カンマ区切り)" />
+      <button class="btn primary small" type="submit">追加</button>
+    </form>
+  </div>
+  <div id="tagFilter" class="tagfilter"></div>
+  <ul id="taskList" class="tasklist"></ul>
+  <script src="/tasks.js"></script>
+</body>
+</html>

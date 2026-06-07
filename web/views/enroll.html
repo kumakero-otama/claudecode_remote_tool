@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>端末の登録 — Claude Code Remote</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="center">
+  <main class="card">
+    <h1>この端末を登録</h1>
+    <p class="muted">本人確認が完了しました。この端末のパスキー（Face ID / Touch ID / Windows Hello / 指紋・PIN）を登録します。登録した端末だけが命令を実行できます。</p>
+    <button id="register" class="btn primary">この端末を登録する</button>
+    <a class="btn ghost" href="/login">戻る</a>
+    <p id="msg" class="error"></p>
+  </main>
+  <script src="/vendor/simplewebauthn-browser.umd.min.js"></script>
+  <script src="/enroll.js"></script>
+</body>
+</html>
