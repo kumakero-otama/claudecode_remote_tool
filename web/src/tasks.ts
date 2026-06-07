@@ -87,7 +87,9 @@ export async function createTask(title: string, tags: string[]): Promise<TaskMet
   // 衝突回避
   try { await fs.access(filePath(id)); id = `${id}-${Date.now().toString(36).slice(-4)}`; } catch {}
   const fm = { title, tags, status: "todo", updated: now };
-  const content = `---\n${stringifyYaml(fm)}---\n\n# ${title}\n\n（ここにタスクの内容。チャットからの指示でClaudeが編集します）\n`;
+  // 本文はHTML（画像・リンク埋め込み可）。タイトルはエスケープして埋め込む。
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+  const content = `---\n${stringifyYaml(fm)}---\n\n<h1>${esc(title)}</h1>\n<p>（ここにタスクの内容。チャットからの指示でClaudeがHTMLで編集します）</p>\n`;
   await fs.writeFile(filePath(id), content, "utf8");
   // ワーカー(別uid=ホストのotama)が編集できるよう書込権限を付与
   await fs.chmod(filePath(id), 0o666).catch(() => {});

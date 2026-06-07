@@ -19,11 +19,22 @@ const att = createAttachments({
 
 function scroll() { chat.scrollTop = chat.scrollHeight; }
 
+// タスク本文・Claude返信は「HTMLとしてそのまま」描画する（Markdown変換はしない）。
+// ユーザー自身の発言だけはプレーンテキスト扱いにするため、エスケープして改行を<br>化。
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+// 自分の発言: 入力したプレーンテキストを安全に表示（改行のみ反映）
+function userTextToHtml(s) { return escapeHtml(s == null ? "" : s).replace(/\r\n?|\n/g, "<br />"); }
+
 function addMessage(kind, text, meta) {
   const el = document.createElement("div");
   el.className = `msg ${kind}`;
   if (meta) { const m = document.createElement("div"); m.className = "meta small muted"; m.textContent = meta; el.appendChild(m); }
-  const b = document.createElement("div"); b.className = "body"; b.textContent = text; el.appendChild(b);
+  const b = document.createElement("div"); b.className = "body markdown";
+  // 自分の発言はテキスト扱い、Claude/経過の応答は受け取ったHTMLをそのまま描画
+  b.innerHTML = kind === "me" ? userTextToHtml(text) : (text == null ? "" : String(text));
+  el.appendChild(b);
   chat.appendChild(el); scroll(); return el;
 }
 function addThinking(id) {
@@ -41,7 +52,7 @@ function markReceived(id) { const p = pending.get(id); if (p) { p.label.textCont
 function setProgress(id, text) { const p = pending.get(id); if (p) { p.label.textContent = text; scroll(); } else addMessage("progress", text, "経過"); }
 async function finalize(id, text) {
   const p = pending.get(id);
-  if (p) { p.el.classList.remove("thinking"); p.el.querySelector(".body").textContent = text; pending.delete(id); scroll(); }
+  if (p) { p.el.classList.remove("thinking"); const b = p.el.querySelector(".body"); b.classList.add("markdown"); b.innerHTML = text == null ? "" : String(text); pending.delete(id); scroll(); }
   else addMessage("claude", text, "Claude");
   await loadTask(); // タスク本文をリフレッシュ
 }
@@ -56,7 +67,7 @@ async function loadTask() {
     titleEl.textContent = t.title;
     statusEl.textContent = t.status;
     statusEl.className = `ti-status st-${t.status}`;
-    bodyEl.textContent = t.body;
+    bodyEl.innerHTML = t.body == null ? "" : String(t.body); // 本文はHTMLとしてそのまま表示
     tagsEl.textContent = "";
     t.tags.forEach((tag) => { const s = document.createElement("span"); s.className = "tagchip mini"; s.textContent = "#" + tag; tagsEl.appendChild(s); });
   } catch {
