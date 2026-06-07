@@ -223,5 +223,14 @@ function setupSplitter() {
 }
 setupSplitter();
 
+// 論文だけを別ウィンドウ（新規ブラウザウィンドウ/タブ）で全画面表示する。
+const popoutBtn = document.getElementById("pdPopout");
+if (popoutBtn) {
+  popoutBtn.addEventListener("click", () => {
+    if (!paperId) return;
+    window.open(`/pages/paper-view?id=${encodeURIComponent(paperId)}`, `paperview_${paperId}`);
+  });
+}
+
 if (!paperId) { noteEl.textContent = "論文IDがありません"; }
 else { loadPaper(true); loadHistory().then(connect); }

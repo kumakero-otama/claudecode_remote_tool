@@ -192,6 +192,13 @@ body.task-detail { height: 100vh; }
 #tabNote { padding: 12px 18px; }
 .tagchip.kind { background: var(--accent, #2563eb); color: #fff; }
 
+/* 論文だけの別ウィンドウ表示（全画面） */
+body.paperwin { margin: 0; height: 100vh; }
+.paperwin-root { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
+.paperwin-root .paper-frame { flex: 1 1 auto; width: 100%; height: 100%; border: 0; background: #fff; }
+.paperwin-root .paper-src { flex: 1 1 auto; width: 100%; margin: 0; padding: 14px 16px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 13px/1.6 ui-monospace, Menlo, Consolas, monospace; }
+.paperwin-root .paper-empty { margin: auto; text-align: center; padding: 24px; }
+
 /* ---------- help ---------- */
 body.help { overflow-y: auto; height: 100vh; }
 .help-wrap { max-width: 920px; margin: 0 auto; padding: 20px 24px 48px; }

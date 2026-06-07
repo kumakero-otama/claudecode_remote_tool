@@ -767,6 +767,7 @@ async function main() {
   app.get("/pages/task", requireFull, (_r, res) => res.sendFile(view("pages/task.html")));
   app.get("/pages/papers", requireFull, (_r, res) => res.sendFile(view("pages/papers.html")));
   app.get("/pages/paper", requireFull, (_r, res) => res.sendFile(view("pages/paper.html")));
+  app.get("/pages/paper-view", requireFull, (_r, res) => res.sendFile(view("pages/paper-view.html")));
   app.get("/pages/help", requireFull, (_r, res) => res.sendFile(view("pages/help.html")));
 
   app.listen(WEB_PORT, () => {
